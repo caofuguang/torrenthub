@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "node",
+    "lib": ["ES2022", "DOM"],
+    "outDir": "./dist/server",
+    "rootDir": "./",
+    "strict": false,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": false,
+    "allowImportingTsExtensions": false,
+    "noEmit": false,
+    "sourceMap": false,
+    "types": ["node"],
+    "baseUrl": "./",
+    "paths": {
+      "@shared/*": ["./shared/*"]
+    }
+  },
+  "include": ["api/**/*.ts", "bin/**/*.ts", "bin/**/*.js"],
+  "exclude": ["src", "dist", "node_modules"]
+}

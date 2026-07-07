@@ -1,0 +1,61 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+  html, body, #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-ink-950 text-ink-200 font-sans antialiased;
+    font-feature-settings: "ss01", "cv01";
+  }
+  ::selection {
+    @apply bg-neon/30 text-neon;
+  }
+  /* 滚动条 */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { @apply bg-ink-900; }
+  ::-webkit-scrollbar-thumb { @apply bg-ink-700 rounded-full; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-ink-600; }
+}
+
+@layer components {
+  .card {
+    @apply bg-ink-800/80 border border-ink-700/60 rounded-lg shadow-card backdrop-blur-sm;
+  }
+  .card-hover {
+    @apply transition-all duration-200 hover:border-ink-600 hover:shadow-neon-soft;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-150 border;
+  }
+  .btn-primary {
+    @apply btn bg-neon/10 border-neon/40 text-neon hover:bg-neon/20 hover:shadow-neon-soft;
+  }
+  .btn-ghost {
+    @apply btn bg-transparent border-ink-700 text-ink-300 hover:bg-ink-800 hover:text-ink-100;
+  }
+  .btn-danger {
+    @apply btn bg-vermilion/10 border-vermilion/40 text-vermilion hover:bg-vermilion/20;
+  }
+  .input {
+    @apply w-full bg-ink-900/60 border border-ink-700 rounded-md px-3 py-2 text-sm text-ink-100 placeholder-ink-500
+           focus:outline-none focus:border-neon/50 focus:ring-1 focus:ring-neon/20 transition-colors;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-mono font-medium;
+  }
+  .stat-num {
+    @apply font-mono font-semibold tabular-nums tracking-tight;
+  }
+  .grid-bg {
+    @apply bg-grid;
+    background-size: 32px 32px;
+  }
+}
