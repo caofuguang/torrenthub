@@ -338,10 +338,7 @@ rm ~/Library/Logs/torrenthub.log ~/Library/Logs/torrenthub.err.log
 | 前端框架 | React 18 + TypeScript | 函数组件 + Hooks |
 | 路由 | react-router-dom v7 | SPA |
 | 数据请求 | @tanstack/react-query v5 | 缓存、轮询、批量失效 |
-| 全局状态 | zustand | 轻量状态（客户端选择、抽屉等） |
 | 样式 | TailwindCSS 3 + lucide-react | 暗色工业仪表盘主题 |
-| 图表 | recharts | 健康环、速度趋势 |
-| 动效 | motion | 抽屉、过渡 |
 | 构建工具 | Vite 6 | HMR、代理、生产打包 |
 | 后端框架 | Express 4 + TypeScript | ESM |
 | 实时推送 | ws（WebSocket）+ SSE（日志流） | 客户端状态、告警、活动事件 |
@@ -723,7 +720,7 @@ pino 结构化日志 + `subscribeLogs(cb)` 订阅，供 `/api/logs` SSE 推送�
 #### [src/pages/Dashboard.tsx](file:///Users/caofuguang/TraeProject/torrenthub/src/pages/Dashboard.tsx) — 总览驾驶舱
 - 聚合统计卡：总种子数 / 活动数 / 总下载速度 / 总上传速度 / 可用磁盘
 - 每客户端健康环（SVG，0-100 分）
-- 速度趋势图（recharts）
+- 速度趋势图（SVG）
 - 最近活动流（20 条）
 
 #### [src/pages/Clients.tsx](file:///Users/caofuguang/TraeProject/torrenthub/src/pages/Clients.tsx) — 客户端管理
@@ -1176,7 +1173,7 @@ nssm start TorrentHub
 ### 14.6 打包脚本说明
 
 - 打包脚本 [scripts/build-windows.js](file:///Users/caofuguang/TraeProject/torrenthub/scripts/build-windows.js) 使用纯 Node.js 实现 ZIP 压缩（无需外部依赖）
-- 精简 `package.json` 仅包含生产依赖（`express`, `cors`, `dotenv`, `multer`, `open`, `pino`, `pino-pretty`, `ws`），大幅减小包体积（最终 ZIP 仅约 230 KB）
+- 精简 `package.json` 仅包含生产依赖（`express`, `cors`, `multer`, `open`, `pino`, `pino-pretty`, `ws`），大幅减小包体积
 - `torrenthub.cmd` 启动脚本默认携带 `--no-browser` 参数，避免 Windows 下自动开浏览器体验不佳；如需自动开浏览器，可修改 cmd 文件移除该参数
 
 ---
