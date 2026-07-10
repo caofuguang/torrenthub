@@ -81,6 +81,14 @@ function load(): Store {
 
 function persist(): void {
   ensureDataDir();
+  // 异步写入，避免阻塞事件循环（退出时用 persistSync 兜底）
+  fs.writeFile(config.dbPath, JSON.stringify(store, null, 2), (err) => {
+    if (err) console.error('存储写入失败:', err.message);
+  });
+}
+
+function persistSync(): void {
+  ensureDataDir();
   fs.writeFileSync(config.dbPath, JSON.stringify(store, null, 2));
 }
 
@@ -194,12 +202,15 @@ export function deleteClient(id: string): void {
 
 // ===== 告警 CRUD =====
 export function listAlerts(limit = 100): Alert[] {
-  return getDb().alerts
+  const db = getDb();
+  // 预建 client 索引，避免 O(n*m) 逐条 find
+  const clientMap = new Map(db.clients.map((c) => [c.id, c]));
+  return db.alerts
     .slice()
     .sort((a, b) => b.created_at - a.created_at)
     .slice(0, limit)
     .map((r) => {
-      const client = getClient(r.client_id);
+      const client = clientMap.get(r.client_id);
       return {
         id: r.id, clientId: r.client_id, clientName: client?.name,
         level: r.level, event: r.event, detail: r.detail,
@@ -229,14 +240,39 @@ export function updateAlert(id: string, status: Alert['status']): void {
   scheduleSave();
 }
 
+// 清理过期告警：删除超过保留期的已解决/已确认告警，并限制 open 告警总数
+export function cleanupExpiredAlerts(retentionDays: number): number {
+  const db = getDb();
+  const before = db.alerts.length;
+  const cutoff = Date.now() - retentionDays * 24 * 3600 * 1000;
+  db.alerts = db.alerts.filter((a) => {
+    // 保留未过期告警
+    if (a.created_at > cutoff) return true;
+    // 已解决/已确认的过期告警删除
+    if (a.status !== 'open') return false;
+    return true;
+  });
+  // 安全上限：open 告警最多保留 500 条（20 客户端 × 25 条/客户端）
+  const openAlerts = db.alerts.filter((a) => a.status === 'open');
+  if (openAlerts.length > 500) {
+    const keepIds = new Set(openAlerts.slice(-500).map((a) => a.id));
+    db.alerts = db.alerts.filter((a) => a.status !== 'open' || keepIds.has(a.id));
+  }
+  const removed = before - db.alerts.length;
+  if (removed > 0) scheduleSave();
+  return removed;
+}
+
 // ===== 活动流 CRUD =====
 export function listActivities(limit = 50): ActivityEvent[] {
-  return getDb().activities
+  const db = getDb();
+  const clientMap = new Map(db.clients.map((c) => [c.id, c]));
+  return db.activities
     .slice()
     .sort((a, b) => b.created_at - a.created_at)
     .slice(0, limit)
     .map((r) => {
-      const client = getClient(r.client_id);
+      const client = clientMap.get(r.client_id);
       return {
         id: r.id, clientId: r.client_id, clientName: client?.name,
         eventType: r.event_type, payload: r.payload ? JSON.parse(r.payload) : {},
@@ -292,6 +328,6 @@ function generateId(): string {
 }
 
 // 进程退出时同步落盘
-process.on('exit', () => { if (store) persist(); });
-process.on('SIGINT', () => { if (store) persist(); process.exit(0); });
-process.on('SIGTERM', () => { if (store) persist(); process.exit(0); });
+process.on('exit', () => { if (store) persistSync(); });
+process.on('SIGINT', () => { if (store) persistSync(); process.exit(0); });
+process.on('SIGTERM', () => { if (store) persistSync(); process.exit(0); });

@@ -2,33 +2,33 @@
 import { Router } from 'express';
 import { listClients } from '../db.js';
 import { getAdapter } from '../adapters/registry.js';
+import { mapWithConcurrency } from '../concurrency.js';
 import type { BatchTrackerRequest, TrackerAggregate, BatchResult } from '@shared/types';
 import { logger } from '../logger.js';
 
 const router = Router();
+const TRACKER_CONCURRENCY = 8;
 
 // 跨客户端 Tracker 聚合统计
 router.get('/', async (_req, res) => {
   const clients = listClients().filter((c) => c.status !== 'offline');
   const aggregate = new Map<string, TrackerAggregate>();
 
-  const results = await Promise.allSettled(
-    clients.map(async (c) => {
-      const adapter = getAdapter(c.id);
-      if (!adapter) return;
-      const torrents = await adapter.getTorrents();
-      for (const t of torrents) {
-        for (const url of t.trackers) {
-          if (!aggregate.has(url)) {
-            aggregate.set(url, { url, torrentCount: 0, totalSeeders: 0, totalLeechers: 0, clients: [] });
-          }
-          const agg = aggregate.get(url)!;
-          agg.torrentCount++;
-          if (!agg.clients.includes(c.name)) agg.clients.push(c.name);
+  const results = await mapWithConcurrency(clients, async (c) => {
+    const adapter = getAdapter(c.id);
+    if (!adapter) return;
+    const torrents = await adapter.getTorrents();
+    for (const t of torrents) {
+      for (const url of t.trackers) {
+        if (!aggregate.has(url)) {
+          aggregate.set(url, { url, torrentCount: 0, totalSeeders: 0, totalLeechers: 0, clients: [] });
         }
+        const agg = aggregate.get(url)!;
+        agg.torrentCount++;
+        if (!agg.clients.includes(c.name)) agg.clients.push(c.name);
       }
-    }),
-  );
+    }
+  }, TRACKER_CONCURRENCY);
 
   results.forEach((r, i) => {
     if (r.status === 'rejected') logger.warn({ clientId: clients[i]?.id }, 'Tracker 聚合失败');

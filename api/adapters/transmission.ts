@@ -32,6 +32,8 @@ export class TransmissionAdapter implements ClientAdapter {
 
   private async rpc<T = unknown>(method: string, args: Record<string, unknown> = {}): Promise<T> {
     const body = JSON.stringify({ method, arguments: args });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
     let res: Response;
     try {
       res = await fetch(`${this.url}/transmission/rpc`, {
@@ -42,9 +44,12 @@ export class TransmissionAdapter implements ClientAdapter {
           ...(this.authHeader ? { Authorization: this.authHeader } : {}),
         },
         body,
+        signal: controller.signal,
       });
     } catch (e) {
-      throw new AdapterError(`连接失败: ${(e as Error).message}`, 'NETWORK_ERROR', e);
+      throw new AdapterError(`连接失败: ${(e as Error).name === 'AbortError' ? '请求超时' : (e as Error).message}`, 'NETWORK_ERROR', e);
+    } finally {
+      clearTimeout(timeout);
     }
 
     // 409 -> 提取 session id 重试

@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 import type { BatchResult } from '@shared/types';
 
 export default function Trackers() {
-  const { data: trackers = [], isLoading } = useQuery({ queryKey: ['trackers'], queryFn: api.listTrackers, refetchInterval: 15000 });
+  const { data: trackers = [], isLoading } = useQuery({ queryKey: ['trackers'], queryFn: api.listTrackers, refetchInterval: 15000, refetchIntervalInBackground: false });
   const qc = useQueryClient();
 
   const [search, setSearch] = useState('');

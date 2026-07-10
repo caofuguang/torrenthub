@@ -23,6 +23,7 @@ export default function Torrents() {
     queryKey: ['torrents', search, statusFilter],
     queryFn: () => api.listTorrents({ search, status: statusFilter }),
     refetchInterval: 5000,
+    refetchIntervalInBackground: false,
   });
   const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: api.listClients });
   const clientTypeMap = useMemo(() => {

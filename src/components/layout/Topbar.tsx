@@ -12,10 +12,12 @@ export function Topbar() {
     return () => clearInterval(t);
   }, []);
 
+  // 复用 Dashboard 的 queryKey，使 React Query 自动去重，避免重复请求
   const { data } = useQuery({
-    queryKey: ['dashboard-summary'],
+    queryKey: ['dashboard'],
     queryFn: () => api.getDashboard(),
     refetchInterval: 5000,
+    refetchIntervalInBackground: false,
   });
 
   const stats = data?.stats;

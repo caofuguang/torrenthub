@@ -24,15 +24,20 @@ export class QbittorrentAdapter implements ClientAdapter {
     if (this.cookie) headers['Cookie'] = this.cookie;
     if (opts.body instanceof URLSearchParams) headers['Content-Type'] = 'application/x-www-form-urlencoded';
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
     let res: Response;
     try {
       res = await fetch(`${this.url}${path}`, {
         method: opts.method || 'GET',
         headers,
         body: opts.body,
+        signal: controller.signal,
       });
     } catch (e) {
-      throw new AdapterError(`连接失败: ${(e as Error).message}`, 'NETWORK_ERROR', e);
+      throw new AdapterError(`连接失败: ${(e as Error).name === 'AbortError' ? '请求超时' : (e as Error).message}`, 'NETWORK_ERROR', e);
+    } finally {
+      clearTimeout(timeout);
     }
 
     if (res.status === 403) {

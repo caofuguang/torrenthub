@@ -14,6 +14,7 @@ export default function Dashboard() {
     queryKey: ['dashboard'],
     queryFn: () => api.getDashboard(),
     refetchInterval: 5000,
+    refetchIntervalInBackground: false,
   });
 
   if (isLoading) {

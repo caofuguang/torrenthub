@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 import type { Alert, MonitorRule } from '@shared/types';
 
 export default function Monitor() {
-  const { data: alerts = [], isLoading } = useQuery({ queryKey: ['alerts'], queryFn: api.listAlerts, refetchInterval: 10000 });
+  const { data: alerts = [], isLoading } = useQuery({ queryKey: ['alerts'], queryFn: api.listAlerts, refetchInterval: 10000, refetchIntervalInBackground: false });
   const { data: rules = [] } = useQuery({ queryKey: ['rules'], queryFn: api.listRules });
   const [tab, setTab] = useState<'alerts' | 'rules'>('alerts');
   const [expanded, setExpanded] = useState<Set<string>>(new Set());

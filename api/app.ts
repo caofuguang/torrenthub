@@ -22,11 +22,14 @@ export function createApp(): express.Application {
   const app: express.Application = express();
 
   app.use(cors());
-  app.use(express.json({ limit: '50mb' }));
-  app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+  app.use(express.json({ limit: '5mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 
-  // torrent 文件上传
-  const upload = multer({ storage: multer.memoryStorage() });
+  // torrent 文件上传（torrent 文件通常 < 1MB，限制 10MB 防止内存滥用）
+  const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024 },
+  });
   app.use('/api/torrents/upload', upload.single('torrent'));
 
   // API 路由
@@ -39,8 +42,14 @@ export function createApp(): express.Application {
   app.use('/api/settings', settingsRoutes);
   app.use('/api/proxy', proxyRoutes);
 
-  // 日志 SSE
+  // 日志 SSE（限制并发连接数 + 心跳保活）
+  let sseConnectionCount = 0;
+  const MAX_SSE_CONNECTIONS = 10;
   app.get('/api/logs', (req: Request, res: Response) => {
+    if (sseConnectionCount >= MAX_SSE_CONNECTIONS) {
+      return res.status(503).json({ success: false, error: '日志连接数已达上限' });
+    }
+    sseConnectionCount++;
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
@@ -50,7 +59,15 @@ export function createApp(): express.Application {
     const unsub = subscribeLogs((entry) => {
       res.write(`data: ${JSON.stringify(entry)}\n\n`);
     });
-    req.on('close', unsub);
+    // 心跳：每 30s 发送注释行，防止连接僵死
+    const heartbeat = setInterval(() => {
+      res.write(': heartbeat\n\n');
+    }, 30000);
+    req.on('close', () => {
+      unsub();
+      clearInterval(heartbeat);
+      sseConnectionCount--;
+    });
   });
 
   // 静态前端（生产模式）

@@ -1,11 +1,13 @@
 // 种子管理路由（跨客户端聚合）
 import { Router } from 'express';
 import { listClients } from '../db.js';
-import { getAdapter } from '../adapters/registry.js';
+import { getAdapter, invalidateTorrentCache } from '../adapters/registry.js';
+import { mapWithConcurrency } from '../concurrency.js';
 import type { UnifiedTorrent, AddTorrentRequest, BatchResult } from '@shared/types';
 import { logger } from '../logger.js';
 
 const router = Router();
+const TORRENTS_CONCURRENCY = 8;
 
 // 跨客户端聚合种子列表
 router.get('/', async (req, res) => {
@@ -13,12 +15,14 @@ router.get('/', async (req, res) => {
   const clients = listClients().filter((c) => c.status !== 'offline');
   const targetClients = clientId ? [clientId] : clients.map((c) => c.id);
 
-  const results = await Promise.allSettled(
-    targetClients.map(async (cid) => {
+  const results = await mapWithConcurrency(
+    targetClients,
+    async (cid) => {
       const adapter = getAdapter(cid);
       if (!adapter) return [] as UnifiedTorrent[];
       return adapter.getTorrents();
-    }),
+    },
+    TORRENTS_CONCURRENCY,
   );
 
   let torrents: UnifiedTorrent[] = [];
@@ -84,6 +88,7 @@ router.post('/', async (req, res) => {
   );
 
   const allOk = results.every((r) => r.success);
+  body.clientIds.forEach((cid) => invalidateTorrentCache(cid));
   res.status(allOk ? 200 : 207).json({ success: allOk, data: results });
 });
 
@@ -115,6 +120,7 @@ router.delete('/', async (req, res) => {
   }
 
   res.json({ success: results.every((r) => r.success), data: results });
+  for (const cid of grouped.keys()) invalidateTorrentCache(cid);
 });
 
 // 批量暂停/恢复
@@ -148,6 +154,7 @@ router.patch('/state', async (req, res) => {
   }
 
   res.json({ success: results.every((r) => r.success), data: results });
+  for (const cid of grouped.keys()) invalidateTorrentCache(cid);
 });
 
 // 设置文件优先级

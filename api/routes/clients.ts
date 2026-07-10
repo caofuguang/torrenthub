@@ -15,6 +15,7 @@ import {
   testConnection,
   recordActivity,
 } from '../adapters/registry.js';
+import { clearClientMonitorState } from '../monitor.js';
 import { logger } from '../logger.js';
 
 const router = Router();
@@ -63,6 +64,7 @@ router.put('/:id', (req, res) => {
 // 删除
 router.delete('/:id', (req, res) => {
   removeAdapter(req.params.id);
+  clearClientMonitorState(req.params.id);
   deleteClient(req.params.id);
   res.json({ success: true });
 });
