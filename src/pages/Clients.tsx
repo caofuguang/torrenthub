@@ -9,7 +9,7 @@ import { formatBytes, timeAgo } from '@/lib/format';
 import type { ClientInstance, ClientType } from '@shared/types';
 
 export default function Clients() {
-  const { data: clients = [], isLoading } = useQuery({ queryKey: ['clients'], queryFn: api.listClients });
+  const { data: clients = [], isLoading } = useQuery({ queryKey: ['clients'], queryFn: api.listClients, structuralSharing: false });
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<ClientInstance | null>(null);
 
@@ -26,7 +26,7 @@ export default function Clients() {
       </div>
 
       {isLoading ? (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">{[...Array(3)].map((_, i) => <div key={i} className="h-44 card animate-pulse" />)}</div>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">{[...Array(3)].map((_, i) => <div key={i} className="h-44 card" />)}</div>
       ) : clients.length === 0 ? (
         <div className="card">
           <Empty
@@ -151,8 +151,8 @@ function ClientForm({ editing, onClose }: { editing: ClientInstance | null; onCl
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="card w-full max-w-md p-6 animate-fade-up" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={onClose}>
+      <div className="card w-full max-w-md p-6 animate-fade-up shadow-2xl bg-gradient-to-b from-ink-800/90 to-ink-850/90" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-5">
           <h2 className="font-display text-lg font-medium text-ink-100">{editing ? '编辑客户端' : '添加客户端'}</h2>
           <button onClick={onClose} className="text-ink-500 hover:text-ink-200"><X className="w-5 h-5" /></button>

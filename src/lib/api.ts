@@ -51,7 +51,7 @@ export const api = {
     if (params?.status) qs.set('status', params.status);
     if (params?.search) qs.set('search', params.search);
     const q = qs.toString();
-    return request<{ torrents: UnifiedTorrent[]; total: number } | UnifiedTorrent[]>(`/torrents${q ? `?${q}` : ''}`) as unknown as Promise<UnifiedTorrent[]>;
+    return request<{ list: UnifiedTorrent[]; total: number }>(`/torrents${q ? `?${q}` : ''}`);
   },
   getTorrentDetails: (clientId: string, hash: string) =>
     request<{ files: import('@shared/types').TorrentFile[]; peers: import('@shared/types').PeerInfo[]; trackers: import('@shared/types').TrackerStat[]; raw: unknown }>(`/torrents/${clientId}/${hash}`),

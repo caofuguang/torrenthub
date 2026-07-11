@@ -1,4 +1,5 @@
 // 总览驾驶舱 - 跨客户端聚合统计、健康状态环、实时活动流
+import { memo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowDown, ArrowUp, FileDown, Activity, Server, Cpu, AlertTriangle } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -13,16 +14,17 @@ export default function Dashboard() {
   const { data, isLoading } = useQuery({
     queryKey: ['dashboard'],
     queryFn: () => api.getDashboard(),
-    refetchInterval: 5000,
+    refetchInterval: 30000,
     refetchIntervalInBackground: false,
+    structuralSharing: false,
   });
 
   if (isLoading) {
-    return <div className="grid gap-4 animate-pulse">{[...Array(4)].map((_, i) => <div key={i} className="h-28 card" />)}</div>;
+    return <div className="grid gap-4">{[...Array(4)].map((_, i) => <div key={i} className="h-28 card" />)}</div>;
   }
 
   const stats = data?.stats;
-  const activities = data?.activities || [];
+  const activities = Array.isArray(data?.activities) ? data.activities.slice(0, 50) : [];
 
   return (
     <div className="space-y-6">
@@ -88,7 +90,7 @@ export default function Dashboard() {
               <Activity className="w-4 h-4 text-neon" strokeWidth={1.5} />
               活动流
             </h2>
-            <span className="badge bg-ink-800 text-ink-400">{activities.length}</span>
+            <span className="badge bg-ink-800/60 text-ink-400">{activities.length}</span>
           </div>
           <div className="flex-1 overflow-y-auto space-y-2 pr-1">
             {activities.length === 0 ? (
@@ -97,8 +99,8 @@ export default function Dashboard() {
               activities.map((ev) => (
                 <div key={ev.id} className="flex gap-3 text-sm group">
                   <div className="flex flex-col items-center pt-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-neon/60" />
-                    <span className="w-px flex-1 bg-ink-700 mt-1" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-neon/60 shadow-[0_0_6px_rgba(0,230,118,0.5)]" />
+                    <span className="w-px flex-1 bg-ink-700/50 mt-1" />
                   </div>
                   <div className="flex-1 pb-2">
                     <div className="flex items-center gap-2">
@@ -117,28 +119,34 @@ export default function Dashboard() {
   );
 }
 
+const accentColors: Record<string, { text: string; border: string; bg: string; icon: string }> = {
+  neon: { text: 'text-neon', border: 'border-neon/20', bg: 'from-neon/10', icon: 'text-neon' },
+  trans: { text: 'text-trans', border: 'border-trans/20', bg: 'from-trans/10', icon: 'text-trans' },
+  amber: { text: 'text-amber', border: 'border-amber/20', bg: 'from-amber/10', icon: 'text-amber' },
+};
+
 function StatCard({ icon, label, value, sub, accent }: { icon: React.ReactNode; label: string; value: string; sub?: string; accent: 'neon' | 'trans' | 'amber' }) {
-  const accentMap = { neon: 'text-neon border-neon/20', trans: 'text-trans border-trans/20', amber: 'text-amber border-amber/20' };
+  const a = accentColors[accent];
   return (
-    <div className={cn('card p-4 card-hover', accentMap[accent])}>
+    <div className={cn('card p-4 card-hover bg-gradient-to-br to-transparent', a.border, a.bg)}>
       <div className="flex items-center justify-between">
         <span className="text-xs text-ink-400">{label}</span>
-        <span className={accentMap[accent].split(' ')[0]}>{icon}</span>
+        <span className={a.icon}>{icon}</span>
       </div>
-      <div className="mt-2 stat-num text-2xl text-ink-100">{value}</div>
+      <div className={cn('mt-2 stat-num text-2xl', a.text)}>{value}</div>
       {sub && <div className="text-xs text-ink-500 mt-1">{sub}</div>}
     </div>
   );
 }
 
-function ClientHealthCard({ client }: { client: ClientHealth }) {
+const ClientHealthCard = memo(function ClientHealthCard({ client }: { client: ClientHealth }) {
   const score = client.healthScore;
   const color = score >= 70 ? '#00E676' : score >= 40 ? '#FFB300' : '#FF3D00';
   const circumference = 2 * Math.PI * 28;
   const offset = circumference - (score / 100) * circumference;
 
   return (
-    <Link to="/clients" className="card p-4 card-hover group">
+    <Link to="/clients" className="card p-4 card-hover group bg-gradient-to-br from-ink-800/50 to-transparent">
       <div className="flex items-center gap-3">
         <div className="relative w-16 h-16 flex-shrink-0">
           <svg className="w-16 h-16 -rotate-90" viewBox="0 0 64 64">
@@ -148,7 +156,6 @@ function ClientHealthCard({ client }: { client: ClientHealth }) {
               strokeDasharray={circumference}
               strokeDashoffset={offset}
               strokeLinecap="round"
-              style={{ transition: 'stroke-dashoffset 0.6s ease' }}
             />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
@@ -166,13 +173,13 @@ function ClientHealthCard({ client }: { client: ClientHealth }) {
           </div>
         </div>
       </div>
-      <div className="mt-3 flex items-center justify-between text-xs">
+      <div className="mt-3 flex items-center justify-between text-xs pt-2 border-t border-ink-800/40">
         <span className="text-neon stat-num">{formatSpeed(client.downloadSpeed)}</span>
         <span className="text-trans stat-num">{formatSpeed(client.uploadSpeed)}</span>
       </div>
     </Link>
   );
-}
+});
 
 function eventLabel(type: string): string {
   const map: Record<string, string> = {

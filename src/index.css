@@ -14,48 +14,63 @@
   body {
     @apply bg-ink-950 text-ink-200 font-sans antialiased;
     font-feature-settings: "ss01", "cv01";
+    /* 微妙的径向渐变背景，增加深度感而不消耗 GPU */
+    background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(0,230,118,0.06), transparent);
+    background-attachment: fixed;
   }
   ::selection {
     @apply bg-neon/30 text-neon;
   }
-  /* 滚动条 */
-  ::-webkit-scrollbar { width: 8px; height: 8px; }
-  ::-webkit-scrollbar-track { @apply bg-ink-900; }
-  ::-webkit-scrollbar-thumb { @apply bg-ink-700 rounded-full; }
+  /* 滚动条美化 */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { @apply bg-transparent; }
+  ::-webkit-scrollbar-thumb { @apply bg-ink-700/50 rounded-full; }
   ::-webkit-scrollbar-thumb:hover { @apply bg-ink-600; }
 }
 
 @layer components {
+  /* 卡片：渐变背景 + 微光边框 */
   .card {
-    @apply bg-ink-800/80 border border-ink-700/60 rounded-lg shadow-card backdrop-blur-sm;
+    @apply bg-gradient-to-b from-ink-800/80 to-ink-850/80 border border-ink-700/50 rounded-xl shadow-card;
   }
   .card-hover {
-    @apply transition-all duration-200 hover:border-ink-600 hover:shadow-neon-soft;
+    @apply transition-colors duration-150 hover:border-ink-600/80;
   }
+  /* 按钮：渐变质感 */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-150 border;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-150 border;
   }
   .btn-primary {
-    @apply btn bg-neon/10 border-neon/40 text-neon hover:bg-neon/20 hover:shadow-neon-soft;
+    @apply btn bg-gradient-to-b from-neon/15 to-neon/5 border-neon/40 text-neon hover:from-neon/25 hover:to-neon/10 hover:shadow-neon-soft;
   }
   .btn-ghost {
-    @apply btn bg-transparent border-ink-700 text-ink-300 hover:bg-ink-800 hover:text-ink-100;
+    @apply btn bg-ink-800/50 border-ink-700/60 text-ink-300 hover:bg-ink-750 hover:text-ink-100 hover:border-ink-600;
   }
   .btn-danger {
-    @apply btn bg-vermilion/10 border-vermilion/40 text-vermilion hover:bg-vermilion/20;
+    @apply btn bg-gradient-to-b from-vermilion/15 to-vermilion/5 border-vermilion/40 text-vermilion hover:from-vermilion/25 hover:to-vermilion/10;
   }
+  /* 输入框：微光聚焦 */
   .input {
-    @apply w-full bg-ink-900/60 border border-ink-700 rounded-md px-3 py-2 text-sm text-ink-100 placeholder-ink-500
+    @apply w-full bg-ink-900/60 border border-ink-700/70 rounded-lg px-3 py-2 text-sm text-ink-100 placeholder-ink-500
            focus:outline-none focus:border-neon/50 focus:ring-1 focus:ring-neon/20 transition-colors;
   }
+  /* 徽章 */
   .badge {
-    @apply inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-mono font-medium;
+    @apply inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-mono font-medium;
   }
   .stat-num {
     @apply font-mono font-semibold tabular-nums tracking-tight;
   }
+  /* 网格背景（静态 CSS，无动画开销） */
   .grid-bg {
     @apply bg-grid;
     background-size: 32px 32px;
+  }
+  /* 发光文字 */
+  .glow-neon {
+    text-shadow: 0 0 12px rgba(0,230,118,0.4);
+  }
+  .glow-trans {
+    text-shadow: 0 0 12px rgba(0,184,212,0.4);
   }
 }

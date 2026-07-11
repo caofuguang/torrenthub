@@ -40,10 +40,14 @@ router.get('/', async (req, res) => {
   // 排序：默认按添加时间倒序
   torrents.sort((a, b) => b.addedOn - a.addedOn);
 
+  // 服务端分页：无搜索时限制返回 500 条，避免传输 31000+ 条数据
+  const totalCount = torrents.length;
+  const limit = search ? undefined : 500;
+  const limitedTorrents = limit ? torrents.slice(0, limit) : torrents;
+
   res.json({
     success: true,
-    data: torrents,
-    total: torrents.length,
+    data: { list: limitedTorrents, total: totalCount },
   });
 });
 

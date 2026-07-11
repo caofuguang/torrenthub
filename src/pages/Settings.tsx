@@ -6,7 +6,7 @@ import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 export default function Settings() {
-  const { data: settings = {} } = useQuery({ queryKey: ['settings'], queryFn: api.getSettings });
+  const { data: settings = {} } = useQuery({ queryKey: ['settings'], queryFn: api.getSettings, structuralSharing: false });
   const [local, setLocal] = useState<Record<string, string>>({});
   const qc = useQueryClient();
   const saveMut = useMutation({
@@ -26,6 +26,7 @@ export default function Settings() {
       return json.data;
     },
     retry: false,
+    structuralSharing: false,
   });
 
   // 导入导出状态
@@ -134,10 +135,10 @@ export default function Settings() {
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <button className="flex items-center justify-center gap-2 p-3 rounded-lg border border-ink-700 hover:border-neon/40 hover:bg-neon/5 transition-all text-sm" onClick={handleExport}>
+              <button className="flex items-center justify-center gap-2 p-3 rounded-lg border border-ink-700 hover:border-neon/40 hover:bg-neon/5 transition-colors text-sm" onClick={handleExport}>
                 <Download className="w-4 h-4 text-neon" /> 导出数据
               </button>
-              <button className="flex items-center justify-center gap-2 p-3 rounded-lg border border-ink-700 hover:border-neon/40 hover:bg-neon/5 transition-all text-sm" onClick={() => fileInputRef.current?.click()}>
+              <button className="flex items-center justify-center gap-2 p-3 rounded-lg border border-ink-700 hover:border-neon/40 hover:bg-neon/5 transition-colors text-sm" onClick={() => fileInputRef.current?.click()}>
                 <Upload className="w-4 h-4 text-neon" /> 导入数据
               </button>
               <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleImport} />
@@ -179,7 +180,7 @@ export default function Settings() {
             <h2 className="text-sm font-medium text-ink-200 flex items-center gap-2"><Palette className="w-4 h-4 text-neon" /> 外观</h2>
             <div className="grid grid-cols-3 gap-3">
               {(['dark', 'light', 'system'] as const).map((t) => (
-                <button key={t} onClick={() => setLocal({ ...local, theme: t })} className={cn('p-4 rounded-lg border text-center transition-all', local.theme === t ? 'border-neon/40 bg-neon/5' : 'border-ink-700 hover:border-ink-600')}>
+                <button key={t} onClick={() => setLocal({ ...local, theme: t })} className={cn('p-4 rounded-lg border text-center transition-colors', local.theme === t ? 'border-neon/40 bg-neon/5' : 'border-ink-700 hover:border-ink-600')}>
                   <div className={cn('w-full h-12 rounded mb-2', t === 'dark' ? 'bg-ink-900' : t === 'light' ? 'bg-ink-100' : 'bg-gradient-to-r from-ink-900 to-ink-100')} />
                   <span className="text-xs text-ink-300">{t === 'dark' ? '暗色' : t === 'light' ? '亮色' : '跟随系统'}</span>
                 </button>

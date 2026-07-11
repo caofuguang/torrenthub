@@ -10,8 +10,8 @@ import { cn } from '@/lib/utils';
 import type { Alert, MonitorRule } from '@shared/types';
 
 export default function Monitor() {
-  const { data: alerts = [], isLoading } = useQuery({ queryKey: ['alerts'], queryFn: api.listAlerts, refetchInterval: 10000, refetchIntervalInBackground: false });
-  const { data: rules = [] } = useQuery({ queryKey: ['rules'], queryFn: api.listRules });
+  const { data: alerts = [], isLoading } = useQuery({ queryKey: ['alerts'], queryFn: api.listAlerts, refetchInterval: 30000, refetchIntervalInBackground: false, structuralSharing: false });
+  const { data: rules = [] } = useQuery({ queryKey: ['rules'], queryFn: api.listRules, structuralSharing: false });
   const [tab, setTab] = useState<'alerts' | 'rules'>('alerts');
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
@@ -25,7 +25,7 @@ export default function Monitor() {
           <p className="text-sm text-ink-500 mt-1">告警时间线 · 自动重试 · 规则配置</p>
         </div>
         <div className="flex items-center gap-2">
-          {openCount > 0 && <span className="badge bg-vermilion/15 text-vermilion border border-vermilion/40 animate-pulse">{openCount} 待处理</span>}
+          {openCount > 0 && <span className="badge bg-vermilion/15 text-vermilion border border-vermilion/40">{openCount} 待处理</span>}
         </div>
       </div>
 

@@ -615,6 +615,7 @@ export default function ApiPlayground() {
   const { data: clients = [] } = useQuery({
     queryKey: ['clients'],
     queryFn: api.listClients,
+    structuralSharing: false,
   });
 
   const [selectedClient, setSelectedClient] = useState<string>('');

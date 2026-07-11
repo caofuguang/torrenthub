@@ -9,8 +9,18 @@ import { logger } from '../logger.js';
 const router = Router();
 const TRACKER_CONCURRENCY = 8;
 
+// 聚合结果缓存：避免每次请求都遍历 31000+ 个种子做 tracker 聚合
+// TTL 30s：前端轮询 30s，缓存 >= 轮询间隔确保命中率
+const AGGREGATE_CACHE_TTL_MS = 30000;
+let aggregateCache: { data: TrackerAggregate[]; expireAt: number } | null = null;
+
 // 跨客户端 Tracker 聚合统计
 router.get('/', async (_req, res) => {
+  // 命中缓存直接返回
+  if (aggregateCache && aggregateCache.expireAt > Date.now()) {
+    return res.json({ success: true, data: aggregateCache.data });
+  }
+
   const clients = listClients().filter((c) => c.status !== 'offline');
   const aggregate = new Map<string, TrackerAggregate>();
 
@@ -35,6 +45,7 @@ router.get('/', async (_req, res) => {
   });
 
   const list = Array.from(aggregate.values()).sort((a, b) => b.torrentCount - a.torrentCount);
+  aggregateCache = { data: list, expireAt: Date.now() + AGGREGATE_CACHE_TTL_MS };
   res.json({ success: true, data: list });
 });
 
@@ -92,6 +103,8 @@ router.post('/batch', async (req, res) => {
   }
 
   res.json({ success: results.every((r) => r.success), data: results });
+  // 批量操作后清除聚合缓存，下次请求重新聚合
+  aggregateCache = null;
 });
 
 export default router;

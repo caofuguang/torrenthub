@@ -10,11 +10,12 @@ const adapters = new Map<string, ClientAdapter>();
 
 // ===== getTorrents TTL 缓存 =====
 // dashboard / torrents / trackers 三路由共享同一份缓存，避免对下游客户端重复请求
-const TORRENT_CACHE_TTL_MS = 4000;
-// 随机抖动范围 ±1s，防止 20 客户端缓存同时过期导致缓存雪崩
-const TORRENT_CACHE_JITTER_MS = 1000;
-// getFreeSpace 缓存 TTL（磁盘空间变化不频繁，缓存 30s）
-const FREE_SPACE_CACHE_TTL_MS = 30000;
+// TTL 20s：前端轮询 15s，缓存 > 轮询间隔确保 50%+ 命中率
+const TORRENT_CACHE_TTL_MS = 20000;
+// 随机抖动范围 ±2s，防止 20 客户端缓存同时过期导致缓存雪崩
+const TORRENT_CACHE_JITTER_MS = 2000;
+// getFreeSpace 缓存 TTL（磁盘空间变化不频繁，缓存 60s）
+const FREE_SPACE_CACHE_TTL_MS = 60000;
 
 interface CacheEntry<T = unknown> {
   data: T;

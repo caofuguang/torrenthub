@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 import type { BatchResult } from '@shared/types';
 
 export default function Trackers() {
-  const { data: trackers = [], isLoading } = useQuery({ queryKey: ['trackers'], queryFn: api.listTrackers, refetchInterval: 15000, refetchIntervalInBackground: false });
+  const { data: trackers = [], isLoading } = useQuery({ queryKey: ['trackers'], queryFn: api.listTrackers, refetchInterval: 30000, refetchIntervalInBackground: false, structuralSharing: false });
   const qc = useQueryClient();
 
   const [search, setSearch] = useState('');
@@ -68,7 +68,7 @@ export default function Trackers() {
               filtered.map((t) => {
                 const sel = selected.has(t.url);
                 return (
-                  <div key={t.url} onClick={() => toggle(t.url)} className={cn('flex items-center gap-3 px-4 py-2.5 border-b border-ink-850 cursor-pointer transition-colors', sel ? 'bg-neon/5' : 'hover:bg-ink-800/40')}>
+                  <div key={t.url} onClick={() => toggle(t.url)} className={cn('flex items-center gap-3 px-4 py-2.5 border-b border-ink-850/50 cursor-pointer transition-colors', sel ? 'bg-neon/5' : 'hover:bg-ink-800/30')}>
                     <div className={cn('w-4 h-4 rounded border flex items-center justify-center flex-shrink-0', sel ? 'bg-neon border-neon' : 'border-ink-600')}>{sel && <Check className="w-3 h-3 text-ink-950" />}</div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-mono text-ink-200 truncate">{t.url}</p>

@@ -19,8 +19,9 @@
     "start:dev": "tsx bin/torrenthub.js",
     "package:windows": "npm run build && npm run build:server && node scripts/build-windows.js",
     "package:windows-arm64": "npm run build && npm run build:server && node scripts/build-windows.js --arch arm64",
-    "package:macos": "npm run build && npm run build:server && node scripts/build-windows.js --platform macos",
-    "package:linux": "npm run build && npm run build:server && node scripts/build-windows.js --platform linux"
+    "package:macos": "npm run build && npm run build:server && node scripts/build-macos.js",
+    "package:linux": "npm run build && npm run build:server && node scripts/build-windows.js --platform linux",
+    "package:all": "npm run build && npm run build:server && node scripts/build-macos.js && node scripts/build-windows.js"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.51.0",
@@ -35,7 +36,6 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^7.3.0",
-    "tailwind-merge": "^3.0.2",
     "ws": "^8.18.0"
   },
   "devDependencies": {

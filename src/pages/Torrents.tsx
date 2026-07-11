@@ -1,5 +1,5 @@
 // 种子中心 - 跨客户端统一种子列表、批量操作、详情抽屉
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useCallback, memo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Search, Pause, Play, Trash2, FileDown, ChevronDown, X,
@@ -13,19 +13,33 @@ import { formatBytes, formatSpeed, formatEta, formatRatio, formatPercent } from 
 import { cn } from '@/lib/utils';
 import type { UnifiedTorrent, TorrentFile, PeerInfo, TrackerStat } from '@shared/types';
 
+// 虚拟滚动常量
+const ROW_HEIGHT = 44;
+const BUFFER_ROWS = 5;
+
 export default function Torrents() {
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [drawer, setDrawer] = useState<UnifiedTorrent | null>(null);
 
-  const { data: torrents = [], isLoading } = useQuery({
-    queryKey: ['torrents', search, statusFilter],
-    queryFn: () => api.listTorrents({ search, status: statusFilter }),
-    refetchInterval: 5000,
+  // 搜索防抖 300ms
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['torrents', debouncedSearch, statusFilter],
+    queryFn: () => api.listTorrents({ search: debouncedSearch, status: statusFilter }),
+    refetchInterval: 30000,
     refetchIntervalInBackground: false,
+    structuralSharing: false,
   });
-  const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: api.listClients });
+  const torrents = Array.isArray(data?.list) ? data.list : [];
+  const totalCount = data?.total || 0;
+  const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: api.listClients, structuralSharing: false });
   const clientTypeMap = useMemo(() => {
     const m = new Map<string, 'qbittorrent' | 'transmission'>();
     clients.forEach((c) => m.set(c.id, c.type));
@@ -46,19 +60,40 @@ export default function Torrents() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['torrents'] }); setSelected(new Set()); },
   });
 
-  const toggle = (key: string) => {
+  const toggle = useCallback((key: string) => {
     setSelected((prev) => { const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n; });
-  };
-  const toggleAll = () => {
+  }, []);
+  const toggleAll = useCallback(() => {
     setSelected((prev) => prev.size === torrents.length ? new Set() : new Set(torrents.map((t) => `${t.clientId}::${t.hash}`)));
-  };
+  }, [torrents]);
+
+  // 虚拟滚动 - 使用 rAF 节流，避免每次滚动事件都触发重渲染
+  const [scrollTop, setScrollTop] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const rafRef = useRef<number>(0);
+  const onScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const top = e.currentTarget.scrollTop;
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => setScrollTop(top));
+  }, []);
+  useEffect(() => () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); }, []);
+
+  const totalHeight = torrents.length * ROW_HEIGHT;
+  const containerHeight = 600;
+  const startIndex = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - BUFFER_ROWS);
+  const endIndex = Math.min(torrents.length, Math.ceil((scrollTop + containerHeight) / ROW_HEIGHT) + BUFFER_ROWS);
+  const visibleTorrents = torrents.slice(startIndex, endIndex);
+  const paddingTop = startIndex * ROW_HEIGHT;
+  const paddingBottom = (torrents.length - endIndex) * ROW_HEIGHT;
+
+  const hasMore = totalCount > torrents.length;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-display text-2xl font-semibold text-ink-100">种子中心</h1>
-          <p className="text-sm text-ink-500 mt-1">{torrents.length} 个种子 · 跨客户端聚合</p>
+          <p className="text-sm text-ink-500 mt-1">{totalCount} 个种子 · 跨客户端聚合</p>
         </div>
       </div>
 
@@ -87,60 +122,53 @@ export default function Torrents() {
         )}
       </div>
 
-      {/* 表格 */}
+      {/* 表格 - 虚拟滚动 */}
       <div className="card overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center text-ink-500"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>
         ) : torrents.length === 0 ? (
           <Empty title="暂无种子" description="添加种子或检查客户端连接" icon={<FileDown className="w-12 h-12" strokeWidth={1} />} />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-ink-800 text-xs text-ink-500">
-                  <th className="w-10 px-3 py-2.5"><input type="checkbox" checked={selected.size === torrents.length && torrents.length > 0} onChange={toggleAll} className="accent-neon" /></th>
-                  <th className="text-left px-3 py-2.5 font-medium">名称</th>
-                  <th className="text-left px-3 py-2.5 font-medium w-24">客户端</th>
-                  <th className="text-right px-3 py-2.5 font-medium w-20">大小</th>
-                  <th className="text-left px-3 py-2.5 font-medium w-32">进度</th>
-                  <th className="text-right px-3 py-2.5 font-medium w-24">↓ 速度</th>
-                  <th className="text-right px-3 py-2.5 font-medium w-24">↑ 速度</th>
-                  <th className="text-left px-3 py-2.5 font-medium w-20">状态</th>
-                  <th className="text-right px-3 py-2.5 font-medium w-16">比率</th>
-                </tr>
-              </thead>
-              <tbody>
-                {torrents.map((t) => {
-                  const key = `${t.clientId}::${t.hash}`;
-                  const isSel = selected.has(key);
-                  return (
-                    <tr
-                      key={key}
-                      onClick={() => setDrawer(t)}
-                      className={cn('border-b border-ink-850 cursor-pointer transition-colors group relative', isSel ? 'bg-neon/5' : 'hover:bg-ink-800/40')}
-                    >
-                      <td className="px-3 py-2.5" onClick={(e) => { e.stopPropagation(); toggle(key); }}>
-                        <input type="checkbox" checked={isSel} onChange={() => toggle(key)} className="accent-neon" />
-                      </td>
-                      <td className="px-3 py-2.5">
-                        <div className="flex items-center gap-2 relative">
-                          <span className="absolute -left-3 top-1/2 -translate-y-1/2 w-0.5 h-0 bg-neon group-hover:h-4 transition-all" />
-                          <span className="text-ink-100 truncate max-w-[280px]">{t.name}</span>
-                        </div>
-                      </td>
-                      <td className="px-3 py-2.5"><ClientTypeBadge type={clientTypeMap.get(t.clientId) || 'qbittorrent'} /></td>
-                      <td className="px-3 py-2.5 text-right stat-num text-ink-300">{formatBytes(t.size)}</td>
-                      <td className="px-3 py-2.5"><ProgressBar value={t.progress} showLabel size="sm" color={t.progress === 1 ? 'trans' : 'neon'} /></td>
-                      <td className="px-3 py-2.5 text-right stat-num text-neon">{t.downloadSpeed > 0 ? formatSpeed(t.downloadSpeed) : '—'}</td>
-                      <td className="px-3 py-2.5 text-right stat-num text-trans">{t.uploadSpeed > 0 ? formatSpeed(t.uploadSpeed) : '—'}</td>
-                      <td className="px-3 py-2.5"><TorrentStatusBadge status={t.status} /></td>
-                      <td className="px-3 py-2.5 text-right stat-num text-ink-400">{formatRatio(t.ratio)}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-ink-800/60 text-xs text-ink-500 bg-ink-850/40">
+                    <th className="w-10 px-3 py-2.5"><input type="checkbox" checked={selected.size === torrents.length && torrents.length > 0} onChange={toggleAll} className="accent-neon" /></th>
+                    <th className="text-left px-3 py-2.5 font-medium">名称</th>
+                    <th className="text-left px-3 py-2.5 font-medium w-24">客户端</th>
+                    <th className="text-right px-3 py-2.5 font-medium w-20">大小</th>
+                    <th className="text-left px-3 py-2.5 font-medium w-32">进度</th>
+                    <th className="text-right px-3 py-2.5 font-medium w-24">↓ 速度</th>
+                    <th className="text-right px-3 py-2.5 font-medium w-24">↑ 速度</th>
+                    <th className="text-left px-3 py-2.5 font-medium w-20">状态</th>
+                    <th className="text-right px-3 py-2.5 font-medium w-16">比率</th>
+                  </tr>
+                </thead>
+              </table>
+            </div>
+            <div ref={scrollRef} onScroll={onScroll} className="overflow-auto" style={{ height: containerHeight }}>
+              <table className="w-full text-sm">
+                <tbody>
+                  {paddingTop > 0 && <tr style={{ height: paddingTop }}><td colSpan={9} /></tr>}
+                  {visibleTorrents.map((t) => (
+                    <TorrentRow
+                      key={`${t.clientId}::${t.hash}`}
+                      torrent={t}
+                      isSelected={selected.has(`${t.clientId}::${t.hash}`)}
+                      clientType={clientTypeMap.get(t.clientId) || 'qbittorrent'}
+                      onToggle={toggle}
+                      onClick={setDrawer}
+                    />
+                  ))}
+                  {paddingBottom > 0 && <tr style={{ height: paddingBottom }}><td colSpan={9} /></tr>}
+                </tbody>
+              </table>
+            </div>
+            <div className="px-3 py-2 text-xs text-ink-500 border-t border-ink-800/40 bg-ink-850/30">
+              显示 {startIndex + 1}-{endIndex} / 共 {totalCount} 个种子{hasMore ? '（仅加载前 500 个，使用搜索查找更多）' : ''}
+            </div>
+          </>
         )}
       </div>
 
@@ -148,6 +176,42 @@ export default function Torrents() {
     </div>
   );
 }
+
+// memo 化的种子行组件，避免全列表重渲染
+const TorrentRow = memo(function TorrentRow({
+  torrent: t, isSelected: isSel, clientType, onToggle, onClick,
+}: {
+  torrent: UnifiedTorrent;
+  isSelected: boolean;
+  clientType: 'qbittorrent' | 'transmission';
+  onToggle: (key: string) => void;
+  onClick: (t: UnifiedTorrent) => void;
+}) {
+  const key = `${t.clientId}::${t.hash}`;
+  return (
+    <tr
+      onClick={() => onClick(t)}
+      className={cn('border-b border-ink-850/50 cursor-pointer group relative', isSel ? 'bg-neon/5' : 'hover:bg-ink-800/30')}
+    >
+      <td className="px-3 py-2.5" onClick={(e) => { e.stopPropagation(); onToggle(key); }}>
+        <input type="checkbox" checked={isSel} onChange={() => onToggle(key)} className="accent-neon" />
+      </td>
+      <td className="px-3 py-2.5">
+        <div className="flex items-center gap-2 relative">
+          <span className="absolute -left-3 top-1/2 -translate-y-1/2 w-0.5 h-0 bg-neon group-hover:h-4 shadow-[0_0_6px_rgba(0,230,118,0.6)]" />
+          <span className="text-ink-100 truncate max-w-[280px]">{t.name}</span>
+        </div>
+      </td>
+      <td className="px-3 py-2.5"><ClientTypeBadge type={clientType} /></td>
+      <td className="px-3 py-2.5 text-right stat-num text-ink-300">{formatBytes(t.size)}</td>
+      <td className="px-3 py-2.5"><ProgressBar value={t.progress} showLabel size="sm" color={t.progress === 1 ? 'trans' : 'neon'} /></td>
+      <td className="px-3 py-2.5 text-right stat-num text-neon">{t.downloadSpeed > 0 ? formatSpeed(t.downloadSpeed) : '—'}</td>
+      <td className="px-3 py-2.5 text-right stat-num text-trans">{t.uploadSpeed > 0 ? formatSpeed(t.uploadSpeed) : '—'}</td>
+      <td className="px-3 py-2.5"><TorrentStatusBadge status={t.status} /></td>
+      <td className="px-3 py-2.5 text-right stat-num text-ink-400">{formatRatio(t.ratio)}</td>
+    </tr>
+  );
+});
 
 function TorrentDrawer({ torrent, onClose }: { torrent: UnifiedTorrent; onClose: () => void }) {
   const [tab, setTab] = useState<'files' | 'peers' | 'trackers'>('files');
@@ -158,9 +222,9 @@ function TorrentDrawer({ torrent, onClose }: { torrent: UnifiedTorrent; onClose:
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-sm" onClick={onClose}>
-      <div className="w-full max-w-[480px] bg-ink-900 border-l border-ink-800 flex flex-col animate-slide-in" onClick={(e) => e.stopPropagation()}>
-        <div className="p-5 border-b border-ink-800">
+    <div className="fixed inset-0 z-50 flex justify-end bg-black/70" onClick={onClose}>
+      <div className="w-full max-w-[480px] bg-gradient-to-b from-ink-900 to-ink-950 border-l border-ink-800/60 flex flex-col animate-slide-in shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="p-5 border-b border-ink-800/60">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <h2 className="font-medium text-ink-100 break-words">{torrent.name}</h2>
@@ -178,9 +242,9 @@ function TorrentDrawer({ torrent, onClose }: { torrent: UnifiedTorrent; onClose:
           </div>
         </div>
 
-        <div className="flex border-b border-ink-800">
+        <div className="flex border-b border-ink-800/60">
           {(['files', 'peers', 'trackers'] as const).map((t) => (
-            <button key={t} onClick={() => setTab(t)} className={cn('flex-1 py-2.5 text-xs font-medium transition-colors', tab === t ? 'text-neon border-b border-neon' : 'text-ink-500 hover:text-ink-300')}>
+            <button key={t} onClick={() => setTab(t)} className={cn('flex-1 py-2.5 text-xs font-medium transition-colors', tab === t ? 'text-neon border-b-2 border-neon' : 'text-ink-500 hover:text-ink-300')}>
               {t === 'files' ? `文件${details?.files?.length ? ` (${details.files.length})` : ''}` : t === 'peers' ? `Peer${details?.peers?.length ? ` (${details.peers.length})` : ''}` : `Tracker${details?.trackers?.length ? ` (${details.trackers.length})` : ''}`}
             </button>
           ))}
@@ -211,7 +275,7 @@ function Info({ label, value, accent }: { label: string; value: string; accent?:
   );
 }
 
-function FileList({ files }: { files: TorrentFile[] }) {
+const FileList = memo(function FileList({ files }: { files: TorrentFile[] }) {
   return (
     <div className="divide-y divide-ink-850">
       {files.map((f) => (
@@ -224,9 +288,9 @@ function FileList({ files }: { files: TorrentFile[] }) {
       ))}
     </div>
   );
-}
+});
 
-function PeerList({ peers }: { peers: PeerInfo[] }) {
+const PeerList = memo(function PeerList({ peers }: { peers: PeerInfo[] }) {
   if (peers.length === 0) return <Empty title="无 Peer" />;
   return (
     <div className="divide-y divide-ink-850">
@@ -241,9 +305,9 @@ function PeerList({ peers }: { peers: PeerInfo[] }) {
       ))}
     </div>
   );
-}
+});
 
-function TrackerList({ trackers }: { trackers: TrackerStat[] }) {
+const TrackerList = memo(function TrackerList({ trackers }: { trackers: TrackerStat[] }) {
   if (trackers.length === 0) return <Empty title="无 Tracker" />;
   return (
     <div className="divide-y divide-ink-850">
@@ -263,4 +327,4 @@ function TrackerList({ trackers }: { trackers: TrackerStat[] }) {
       ))}
     </div>
   );
-}
+});

@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 import type { BatchResult } from '@shared/types';
 
 export default function AddTorrent() {
-  const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: api.listClients });
+  const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: api.listClients, structuralSharing: false });
   const onlineClients = clients.filter((c) => c.status !== 'offline');
   const qc = useQueryClient();
 
@@ -165,7 +165,7 @@ export default function AddTorrent() {
               <button
                 key={c.id}
                 onClick={() => setSelectedClients((prev) => { const n = new Set(prev); n.has(c.id) ? n.delete(c.id) : n.add(c.id); return n; })}
-                className={cn('w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-all', sel ? 'bg-neon/5 border-neon/40' : 'border-ink-700 hover:border-ink-600')}
+                className={cn('w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-colors', sel ? 'bg-neon/5 border-neon/40' : 'border-ink-700 hover:border-ink-600')}
               >
                 <div className={cn('w-5 h-5 rounded border flex items-center justify-center', sel ? 'bg-neon border-neon' : 'border-ink-600')}>
                   {sel && <Check className="w-3.5 h-3.5 text-ink-950" />}

@@ -24,6 +24,9 @@ export default defineConfig({
     }), 
     tsconfigPaths(),
   ],
+  build: {
+    sourcemap: true,
+  },
   server: {
     proxy: {
       '/api': {

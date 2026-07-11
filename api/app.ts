@@ -74,9 +74,23 @@ export function createApp(): express.Application {
   // 编译后 __dirname = dist/server/api/，dist/ 在项目根目录（dist/server/ 的同级）
   const distPath = path.join(__dirname, '../..');
   if (fs.existsSync(distPath)) {
-    app.use(express.static(distPath));
+    // 静态资源带 hash 文件名，可长期缓存
+    app.use('/assets', express.static(path.join(distPath, 'assets'), {
+      maxAge: '1y',
+      immutable: true,
+    }));
+    // 其他静态文件（favicon 等）不缓存
+    app.use(express.static(distPath, {
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.html')) {
+          res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        }
+      },
+    }));
+    // SPA 回退：index.html 禁止缓存
     app.get('*', (req, res, next) => {
       if (req.path.startsWith('/api')) return next();
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }

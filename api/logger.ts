@@ -1,10 +1,11 @@
 // 结构化日志
 import pino from 'pino';
 
-const isDev = process.env.NODE_ENV !== 'production';
+// 生产模式或无 TTY（launchd 后台）时不使用 pino-pretty，减少 CPU 开销
+const isDev = process.env.NODE_ENV !== 'production' && process.stdout.isTTY;
 
 export const logger = pino({
-  level: process.env.LOG_LEVEL || 'info',
+  level: process.env.LOG_LEVEL || (isDev ? 'info' : 'warn'),
   transport: isDev
     ? {
         target: 'pino-pretty',

@@ -149,7 +149,6 @@ function syncPackage() {
       'react': '^18.3.1',
       'react-dom': '^18.3.1',
       'react-router-dom': '^7.3.0',
-      'tailwind-merge': '^3.0.2',
       ws: '^8.18.0',
     },
     engines: { node: '>=18' },

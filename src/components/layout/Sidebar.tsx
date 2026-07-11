@@ -16,11 +16,11 @@ const navItems = [
 
 export function Sidebar() {
   return (
-    <aside className="fixed left-0 top-0 bottom-0 w-[72px] bg-ink-900 border-r border-ink-800 flex flex-col items-center py-4 z-40">
-      {/* Logo */}
+    <aside className="fixed left-0 top-0 bottom-0 w-[72px] bg-gradient-to-b from-ink-900 to-ink-950 border-r border-ink-800/60 flex flex-col items-center py-4 z-40">
+      {/* Logo 带发光效果 */}
       <div className="mb-6 flex flex-col items-center">
-        <div className="w-10 h-10 rounded-lg bg-neon/10 border border-neon/30 flex items-center justify-center shadow-neon-soft">
-          <Boxes className="w-5 h-5 text-neon" />
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neon/20 to-neon/5 border border-neon/30 flex items-center justify-center shadow-neon-soft">
+          <Boxes className="w-5 h-5 text-neon" strokeWidth={1.5} />
         </div>
       </div>
 
@@ -33,17 +33,17 @@ export function Sidebar() {
             title={item.label}
             className={({ isActive }) =>
               cn(
-                'group relative w-full flex flex-col items-center justify-center gap-1 py-2.5 rounded-lg transition-all duration-150',
+                'group relative w-full flex flex-col items-center justify-center gap-1 py-2.5 rounded-lg transition-colors',
                 isActive
                   ? 'bg-neon/10 text-neon'
-                  : 'text-ink-400 hover:text-ink-100 hover:bg-ink-800',
+                  : 'text-ink-400 hover:text-ink-100 hover:bg-ink-800/60',
               )
             }
           >
             {({ isActive }) => (
               <>
                 {isActive && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-neon rounded-r-full shadow-neon-soft" />
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-neon rounded-r-full shadow-[0_0_8px_rgba(0,230,118,0.6)]" />
                 )}
                 <item.icon className="w-5 h-5" strokeWidth={1.5} />
                 <span className="text-[10px] font-medium tracking-wide">{item.label}</span>
